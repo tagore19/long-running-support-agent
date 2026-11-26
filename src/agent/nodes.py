@@ -62,7 +62,7 @@ class SupportGraphNodes:
         user_msg = (state.get("user_message") or "").strip()
         customer_id = (state.get("customer_id") or "").strip()
         thread_id = (state.get("thread_id") or "").strip()
-        trace_id = state.get("trace_id") or f"tr-{uuid.uuid4().hex[:10]}"
+        trace_id = f"tr-{uuid.uuid4().hex[:10]}"
         mode = state.get("mode") or self.settings.agent_mode
 
         if not user_msg:

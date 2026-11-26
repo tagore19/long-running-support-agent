@@ -15,7 +15,6 @@ COPY config/           ./config/
 COPY src/              ./src/
 COPY scripts/          ./scripts/
 COPY evals/            ./evals/
-COPY app.py            ./app.py
 COPY .env.example      ./.env.example
 
 RUN pip install --upgrade pip \
@@ -44,7 +43,6 @@ COPY config/           ./config/
 COPY src/              ./src/
 COPY scripts/          ./scripts/
 COPY evals/            ./evals/
-COPY app.py            ./app.py
 COPY .env.example      ./.env.example
 
 # Create persistent data directories owned by appuser
@@ -59,9 +57,6 @@ USER appuser
 RUN python -m scripts.seed_data
 
 # FastAPI (REST + /docs)  → 8000
-# Streamlit Inspector UI  → 8501
-EXPOSE 8000 8501
+EXPOSE 8000
 
-# Default: serve the FastAPI backend.
-# Override with:  docker run ... streamlit run app.py --server.port=8501 --server.address=0.0.0.0
 CMD ["uvicorn", "src.api.app:app", "--host", "0.0.0.0", "--port", "8000"]

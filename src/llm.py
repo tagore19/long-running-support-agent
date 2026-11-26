@@ -78,6 +78,22 @@ def _deterministic_idempotency_key(
     return f"idem-{tool_name}-{order_id or 'na'}-{digest}"
 
 
+def _most_recent_user_order_id(recent_messages: list[dict[str, str]]) -> str | None:
+    """Resolve a single order ID from the latest user turn that mentioned one."""
+    for message in reversed(recent_messages):
+        if message.get("role") != "user":
+            continue
+        order_ids = [
+            entity
+            for entity in extract_entities(message.get("content", ""))
+            if entity.startswith("ORD-")
+        ]
+        if order_ids:
+            unique_order_ids = list(dict.fromkeys(order_ids))
+            return unique_order_ids[0] if len(unique_order_ids) == 1 else None
+    return None
+
+
 class LLMClient:
     """Unified LLM adapter with real provider integrations and deterministic offline fallback."""
 
@@ -253,7 +269,25 @@ class LLMClient:
         entities = extract_entities(user_message)
         order_ids = [e for e in entities if e.startswith("ORD-")]
         ticket_ids = [e for e in entities if e.startswith("TKT-")]
-        target_order_id = order_ids[0] if order_ids else None
+        contextual_order_id = _most_recent_user_order_id(recent_messages)
+        if contextual_order_id not in {str(o["order_id"]) for o in verified_orders}:
+            contextual_order_id = None
+        follow_up_markers = (
+            "status",
+            "where is it",
+            "where is my order",
+            "is it",
+            "delivered",
+            "not received",
+            "never arrived",
+            "already shared",
+            "order id",
+            "what about it",
+        )
+        is_order_follow_up = any(marker in lower for marker in follow_up_markers)
+        target_order_id = order_ids[0] if order_ids else (
+            contextual_order_id if is_order_follow_up else None
+        )
         called_tools = [t["tool_name"] for t in tool_history]
 
         if tool_history:
@@ -497,6 +531,40 @@ class LLMClient:
                     "customer_id": customer_id,
                     "order_id": target_order_id,
                     "reason": user_message[:200],
+                    "priority": "high",
+                    "idempotency_key": _deterministic_idempotency_key(
+                        thread_id, "create_support_ticket", target_order_id, user_message
+                    ),
+                    "thread_id": thread_id,
+                },
+            )
+
+        if target_order_id and "order id" in lower and any(
+            kw in lower for kw in ["what", "which", "shared", "told"]
+        ):
+            return AgentDecision(
+                action="final_answer",
+                response_text=f"You shared order ID {target_order_id}. What would you like me to check?",
+            )
+
+        delivery_dispute_markers = (
+            "not delivered",
+            "isn't delivered",
+            "wasn't delivered",
+            "was not delivered",
+            "not received",
+            "didn't receive",
+            "never arrived",
+            "hasn't arrived",
+        )
+        if target_order_id and any(marker in lower for marker in delivery_dispute_markers):
+            return AgentDecision(
+                action="call_tool",
+                tool_name="create_support_ticket",
+                tool_args={
+                    "customer_id": customer_id,
+                    "order_id": target_order_id,
+                    "reason": f"Customer disputes delivery status: {user_message[:160]}",
                     "priority": "high",
                     "idempotency_key": _deterministic_idempotency_key(
                         thread_id, "create_support_ticket", target_order_id, user_message

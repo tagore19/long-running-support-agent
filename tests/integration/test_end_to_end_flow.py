@@ -68,6 +68,44 @@ async def test_multiturn_checkpoint_and_state_persistence(
         assert len(runner2.repo.get_refunds_for_order("ORD-1013")) == 1
 
 
+@pytest.mark.asyncio
+async def test_ui_style_order_followups_survive_runner_restarts(
+    test_settings: Settings, rules: AppConfig, seeded_env: dict[str, Path]
+) -> None:
+    messages = [
+        "where is my order",
+        "status",
+        "ORD-1003",
+        "it is not delivered",
+        "what is my order id?",
+        "i already shared my order id",
+    ]
+    results = []
+    for message in messages:
+        async with SupportAgentRunner(
+            settings=test_settings,
+            rules=rules,
+            app_db_path=seeded_env["app_db"],
+            checkpoint_db_path=seeded_env["ckpt_db"],
+            trace_log_path=seeded_env["trace_log"],
+            mode="improved",
+        ) as runner:
+            results.append(
+                await runner.arun_turn(
+                    thread_id="ui-order-follow-up",
+                    customer_id="CUST-1001",
+                    user_message=message,
+                )
+            )
+
+    assert "ORD-1003" in results[2]["response"]
+    assert results[3]["final_response"]["escalated"] is True
+    assert "ORD-1003" in results[3]["response"]
+    assert "ORD-1003" in results[4]["response"]
+    assert "ORD-1003" in results[5]["response"]
+    assert len({result["trace_id"] for result in results}) == len(messages)
+
+
 def test_fastapi_e2e_chat_untrusted_attachments_and_state(
     monkeypatch: pytest.MonkeyPatch, seeded_env: dict[str, Path]
 ) -> None:

@@ -14,7 +14,7 @@ This codebase separates AI-assisted scaffolding and LLM planning from determinis
 | `src/policies/` | LLM has no role | All refund eligibility rules (30-day delivery window, 500.00 BRL cap, delivered-order requirement, duplicate refund block, customer ownership) are enforced in Python |
 | `src/database/` + `src/mcp_server/` | LLM has no role | Every state mutation runs inside SQLite `BEGIN IMMEDIATE` transactions with `idempotency_key` deduplication and append-only `events` triggers |
 | `src/observability/` | LLM has no role | PII masking is done by deterministic regex + allowlist before every write |
-| Verification | LLM suggestions are inputs only | `ruff check .`, `pytest` (48 tests), and 20-scenario deterministic evals gate every change |
+| Verification | LLM suggestions are inputs only | `ruff check .`, `pytest` (46 tests), and 20-scenario deterministic evals gate every change |
 
 ---
 
@@ -76,7 +76,7 @@ Additionally, the initial test setup assumed the project had already been seeded
 1. Rewrote `src/observability/redaction.py` with a strict allowlist of safe trace fields (`SAFE_TRACE_FIELDS`) and regex masks for email, phone, CPF, Aadhaar, CEP, street addresses, and secret tokens. Any field not on the allowlist is replaced with `[REDACTED]`; any string value matching a PII pattern is masked before the JSONL write.
 2. Rewrote all test fixtures (`tests/conftest.py`) to call `seed_databases()` into a temporary directory using `pytest`'s `tmp_path` fixture — zero dependency on pre-existing DB state. The `seeded_db` fixture returns `(Path, SupportRepository)` and is fully self-contained.
 3. Added `eval-19-pii-redaction-in-logs` which runs a turn that includes PII in the user message, then scans `traces.jsonl` and fails if the raw PII string appears anywhere in the log file.
-4. The `Clean-Clone Verification Checklist` in `DESIGN.md` documents the exact sequence of commands that must all pass on a fresh clone before submission.
+4. The clone, setup, test, and API validation steps in `README.md` document how to verify the project on a fresh machine.
 
 ---
 
@@ -95,7 +95,7 @@ Every change made in response to the mistakes above is verified by:
 
 ```bash
 ruff check .          # zero lint violations
-pytest -q             # 48 tests, all passing
+pytest -q             # 46 tests, all passing
 python -m evals.runner --mode improved --min-score 0.90
 # 20/20 PASS, Policy violations 0.0%, Duplicates 0.0%
 ```

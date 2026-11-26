@@ -1,24 +1,22 @@
 # Long-Running Customer Support Agent
 
 > **Stateful, multi-turn (30+ turns) e-commerce customer-support agent demo**
-> built with LangGraph · FastMCP `stdio` · SQLite · FastAPI · Streamlit
+> built with LangGraph · FastMCP `stdio` · SQLite · FastAPI
 
 [![CI](https://github.com/tagore19/long-running-support-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/tagore19/long-running-support-agent/actions/workflows/ci.yml)
-
-[Live demo](https://long-running-support-agent-qkwbxhntoeuvlnkageo5vk.streamlit.app/)
 
 ---
 
 ## What This Project Does
 
-This agent handles real e-commerce support workflows — order lookups, refund requests, complaint escalation to human agents — across arbitrarily long conversations (tested to 32+ turns) while guaranteeing:
+This agent handles e-commerce support workflows — order lookups, refund requests, and complaint escalation — with multi-turn behavior tested to 32+ turns. Its core safeguards are:
 
 | Guarantee | How |
 |---|---|
 | **LLM never decides policy** | All refund limits, delivery checks, and ownership rules are enforced in deterministic Python (`src/policies/`) and inside SQLite transactions |
 | **No duplicate refunds** | Idempotency keys stored in `tool_operations`; re-issuing the same key returns the same result without a second DB write |
 | **Order ownership enforced** | Refund and order tools verify that the requested order belongs to the supplied `customer_id` before returning or mutating state |
-| **No prompt injection** | All untrusted inputs (user message, order notes, documents, images) are HTML-escaped and wrapped in explicit `<*_untrusted_data>` delimiters before the prompt builder sees them |
+| **Prompt-injection defenses** | Untrusted user, document, image, and order-note text is detected, escaped, and wrapped in explicit untrusted-data delimiters; deterministic policy checks remain authoritative |
 | **No PII in logs** | Regex + allowlist redaction masks emails, phones, CPF/Aadhaar/CEP numbers, and secrets before every JSONL trace write |
 | **Memory across 30+ turns** | 5-layer architecture: append-only event store → transactional SQLite → episodic episodes → hybrid TF-IDF retrieval → token-budget compaction |
 
@@ -76,83 +74,116 @@ flowchart TD
 
 ## Setup — Local Python
 
+**Prerequisites:** Git and Python 3.11 or newer. For the quickest start, install Docker Desktop with Docker Compose v2; no model API key is needed in mock mode.
+
+Clone the repository:
+
 ```bash
-# 1. Clone
 git clone https://github.com/tagore19/long-running-support-agent.git
 cd long-running-support-agent
+```
 
-# 2. Environment file
-cp .env.example .env
-# Edit .env — add your GEMINI_API_KEY for live LLM calls.
-# Leave GEMINI_API_KEY blank / set LLM_PROVIDER=mock for fully offline mode.
+Create `.env` and a virtual environment.
 
-# 3. Virtual environment (Python 3.11+)
-python -m venv .venv
-# Windows:
+**Windows PowerShell:**
+
+```powershell
+Copy-Item .env.example .env
+py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-# Linux / macOS:
+```
+
+**macOS / Linux:**
+
+```bash
+cp .env.example .env
+python3.11 -m venv .venv
 source .venv/bin/activate
+```
 
-# 4. Install
-pip install -e ".[dev]"
+Install dependencies and seed the local SQLite database:
 
-# 5. Seed SQLite data (idempotent — safe to re-run)
+```bash
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
 python -m scripts.seed_data
 ```
 
+For live Gemini calls only, add `GEMINI_API_KEY` to `.env` and set `LLM_PROVIDER=gemini` and `LLM_MODE=live`. Leave the defaults for fully offline use.
+
 ---
 
-## One-Command Run
+## Run the Agent
 
-### Local
+### Docker run
 
-```bash
-# FastAPI backend (REST + /docs swagger)
-uvicorn src.api.app:app --reload --port 8000
+Create the environment file once:
 
-# Streamlit operator & inspector UI (separate terminal)
-streamlit run app.py
+**Windows PowerShell:**
+```powershell
+Copy-Item .env.example .env
 ```
 
-- API docs: <http://localhost:8000/docs>
-- Streamlit UI: <http://localhost:8501>
-- 32-turn deterministic demo: `python -m scripts.run_demo`
+**macOS / Linux:**
+```bash
+cp .env.example .env
+```
 
-### Docker / docker-compose
+Start the API:
 
 ```bash
-cp .env.example .env     # fill in GEMINI_API_KEY (or leave blank for mock)
 docker compose up --build
 ```
 
-Both services (`api` on :8000, `ui` on :8501) share a persistent volume for SQLite and trace logs.  
-The API healthcheck must pass before the UI container starts.
+Open <http://localhost:8000/docs> to chat through the interactive API docs. Stop the service with `docker compose down`.
+
+### Local Python
+
+```bash
+uvicorn src.api.app:app --reload --port 8000
+```
+
+- API docs: <http://localhost:8000/docs>
+- 32-turn deterministic demo: `python -m scripts.run_demo`
+
+For each chat turn, POST to `/chat` with the **same `thread_id` and `customer_id`** so the agent can continue that conversation. Example request:
+
+```json
+{
+  "thread_id": "demo-order-1",
+  "customer_id": "CUST-1001",
+  "message": "Where is my order?"
+}
+```
 
 ---
 
 ## Tests, Linter & Evals
 
+Run these from the repository root after installing the development dependencies. They use deterministic fixtures and do not require API keys:
+
 ```bash
-# Linter (zero violations required)
+# 1. Lint
 ruff check .
 
-# Full pytest suite (unit + memory + security + integration)
+# 2. Unit, memory, security, and integration tests
 pytest -q
 
-# 20 deterministic eval scenarios — improved mode (CI threshold: ≥ 0.90)
+# 3. Improved 20-case evaluation (must meet the 0.90 CI threshold)
 python -m evals.runner --mode improved --min-score 0.90 --output data/evals/improved.json
 
-# Baseline run (sliding-window, no guardrails — intentionally weaker)
+# 4. Baseline comparison
 python -m evals.runner --mode baseline --output data/evals/baseline.json
 
-# Generate Markdown + JSON before/after comparison report
-python -m evals.report \
-    --baseline data/evals/baseline.json \
-    --improved data/evals/improved.json \
-    --out data/evals/before_after_report.md
+# 5. Generate a before/after report
+python -m evals.report --baseline data/evals/baseline.json --improved data/evals/improved.json --out data/evals/before_after_report.md
 ```
 
 The committed [before/after eval report](evals/reports/before-after.md) records the most recent checked-in run. Latency is machine- and run-dependent; the CI gate checks task success, policy violations, and duplicate actions.
+
+### Verify a clean clone
+
+After cloning, run the setup above, then run `ruff check .`, `pytest -q`, and the improved evaluation command. A successful run exits with status `0`; the eval command also fails if its score is below `0.90`. To validate the running API, start it with Docker Compose or the local Python command, confirm <http://localhost:8000/health> reports `"status": "ok"`, then open <http://localhost:8000/docs> and send two `/chat` requests with the same `thread_id` and `customer_id`.
 
 ---
 
@@ -165,21 +196,16 @@ The committed [before/after eval report](evals/reports/before-after.md) records 
 
 ---
 
-## Deployment — Streamlit Community Cloud
+## Local Docker Deployment
 
-The app is deployed at <https://long-running-support-agent-qkwbxhntoeuvlnkageo5vk.streamlit.app/> from `tagore19/long-running-support-agent` (`main`, entrypoint `app.py`); Streamlit settings currently show **public and searchable**.
+The supported demo runs locally in Docker; no hosted demo URL is currently provided. The default configuration uses the offline mock model, so no API key is needed. To enable Gemini, set `GEMINI_API_KEY`, `LLM_PROVIDER=gemini`, and `LLM_MODE=live` in `.env`. Never commit credentials.
 
-To redeploy it, sign in at <https://share.streamlit.io>, choose **Deploy an app** → **Deploy a public app from GitHub**, and select this repository, `main`, and `app.py`. Streamlit Cloud installs dependencies from `requirements.txt`.
+The Compose setup persists SQLite databases and trace logs in named Docker volumes. This is a local demo, not a production deployment; do not use it for real customer data or financial transactions.
 
-The app runs in offline mock mode without secrets. To enable Gemini, add `GEMINI_API_KEY` to Streamlit Cloud's Secrets; the UI maps it to the process environment for the existing settings layer. Set `LLM_PROVIDER = "gemini"` and `LLM_MODE = "live"` there if desired. Locally, use environment variables or `.env`. Never commit credentials.
-
-> **Persistence limitation:** Streamlit Community Cloud does not provide durable local disk storage across rebuilds/restarts. The demo database and conversation history can be reset. Do not use this deployment for real customer data or financial transactions.
-
-### Local Demo Fallback
+### Demo transcript
 
 ```bash
-python -m scripts.run_demo      # runs a deterministic 32-turn transcript
-# To submit a recording, capture the Streamlit UI or this command with your preferred recorder.
+python -m scripts.run_demo      # runs and saves a deterministic 32-turn transcript
 ```
 
 ---
@@ -190,9 +216,10 @@ python -m scripts.run_demo      # runs a deterministic 32-turn transcript
 
 ```bash
 # Tag releases before shipping
-git tag v1.0.0 && git push origin v1.0.0
+git tag v1.0.0
+git push origin v1.0.0
 
-# Revert to a previous tag
+# Check out a previous tag (if one exists)
 git checkout v0.9.0
 pip install -e ".[dev]"
 ```
@@ -222,9 +249,9 @@ sqlite3 data/checkpoints.db \
 ### Deployment rollback
 
 ```bash
-# Docker: roll back to the previous image tag
+# Rebuild and restart the local Docker service from the checked-out revision
 docker compose down
-docker compose up --build --no-cache   # or pin image: customer-support-agent:v0.9.0
+docker compose up --build
 ```
 
 ---
@@ -232,7 +259,6 @@ docker compose up --build --no-cache   # or pin image: customer-support-agent:v0
 ## Repository Structure
 
 ```
-├── app.py                      Streamlit operator & inspector UI
 ├── config/
 │   └── business_rules.yaml     Policy rules, guardrails, token budgets
 ├── src/
@@ -262,7 +288,7 @@ docker compose up --build --no-cache   # or pin image: customer-support-agent:v0
 │   ├── security/               PII redaction, injection, tracing tests
 │   └── integration/            End-to-end LangGraph + MCP + FastAPI tests
 ├── Dockerfile                  Multi-stage build (builder → runtime, non-root)
-├── docker-compose.yml          api (:8000) + ui (:8501) with shared persistent volume
+├── docker-compose.yml          FastAPI (:8000) with persistent data volumes
 ├── .github/workflows/ci.yml   Ruff → pytest → evals gate on every push/PR
 ├── DESIGN.md                   Architecture decisions and design rationale
 └── AI_USAGE.md                 AI tool usage log and three concrete AI mistakes caught
@@ -273,7 +299,7 @@ docker compose up --build --no-cache   # or pin image: customer-support-agent:v0
 ## Known Limitations
 
 - **SQLite concurrency:** SQLite's `BEGIN IMMEDIATE` transactions prevent double-write races at the row level but are not suitable for high-fan-out multi-process deployments. Migrate to PostgreSQL for production scale.
-- **No end-user authentication:** This is a public demo with synthetic fixtures. The API accepts a caller-supplied `customer_id`, and the UI lets visitors select demo customers. Order ownership checks do not authenticate a real customer; do not connect real accounts or data.
+- **No end-user authentication:** This is a local demo with synthetic fixtures. The API accepts a caller-supplied `customer_id`. Order ownership checks do not authenticate a real customer; do not connect real accounts or data.
 - **Stdio MCP on Windows:** Each MCP server starts as a child process over `stdio`. On Windows, asyncio subprocess handling has additional overhead; the persistent worker queue in `MCPToolClient` mitigates this but does not eliminate it.
 - **`aiosqlite` version pin:** `langgraph-checkpoint-sqlite` requires `aiosqlite < 0.22` (pinned to `0.21.x`). Upgrading LangGraph may lift this constraint.
 - **In-memory TF-IDF:** `HybridMemoryRetriever` builds a TF-IDF matrix on the fly per query over all episodes for the customer. For customers with thousands of episodes, switch to a vector DB (Chroma, pgvector).
@@ -285,7 +311,7 @@ docker compose up --build --no-cache   # or pin image: customer-support-agent:v0
 
 1. **Persistent vector store** — Replace in-memory TF-IDF with Chroma or pgvector for scalable episode retrieval.
 2. **PostgreSQL backend** — Migrate from SQLite to PostgreSQL for multi-process deployment and HA.
-3. **Streaming responses** — Add Server-Sent Events from FastAPI + Streamlit's `st.write_stream` for real-time token streaming.
+3. **Streaming responses** — Add Server-Sent Events from FastAPI for real-time token streaming.
 4. **Human-in-the-loop dashboard** — A separate operator view that shows pending escalation tickets and lets a human agent inject a resolution back into the conversation thread.
 5. **Webhook delivery** — Push refund confirmations and ticket updates to customer email/SMS via a lightweight notification sidecar.
 6. **Multi-language support** — Route through a lightweight detection step and pass language hint to the system prompt.
