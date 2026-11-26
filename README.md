@@ -5,6 +5,8 @@
 
 [![CI](https://github.com/tagore19/long-running-support-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/tagore19/long-running-support-agent/actions/workflows/ci.yml)
 
+[Live demo](https://long-running-support-agent-qkwbxhntoeuvlnkageo5vk.streamlit.app/)
+
 ---
 
 ## What This Project Does
@@ -165,10 +167,11 @@ The committed [before/after eval report](evals/reports/before-after.md) records 
 
 ## Deployment — Streamlit Community Cloud
 
-1. Sign in at <https://share.streamlit.io> and deploy `tagore19/long-running-support-agent`.
-2. Set the main file to `app.py`. Streamlit Cloud installs dependencies from the committed `requirements.txt`.
-3. The app runs in offline mock mode without secrets. To enable Gemini, add `GEMINI_API_KEY` to Streamlit Cloud's Secrets; the UI maps it to the process environment for the existing settings layer. Set `LLM_PROVIDER = "gemini"` and `LLM_MODE = "live"` there if desired. Locally, use environment variables or `.env`. Never commit credentials.
-4. Verify the app with the valid-refund, expired-window, and 32-turn stress-test presets.
+The app is deployed at <https://long-running-support-agent-qkwbxhntoeuvlnkageo5vk.streamlit.app/> from `tagore19/long-running-support-agent` (`main`, entrypoint `app.py`); Streamlit settings currently show **public and searchable**.
+
+To redeploy it, sign in at <https://share.streamlit.io>, choose **Deploy an app** → **Deploy a public app from GitHub**, and select this repository, `main`, and `app.py`. Streamlit Cloud installs dependencies from `requirements.txt`.
+
+The app runs in offline mock mode without secrets. To enable Gemini, add `GEMINI_API_KEY` to Streamlit Cloud's Secrets; the UI maps it to the process environment for the existing settings layer. Set `LLM_PROVIDER = "gemini"` and `LLM_MODE = "live"` there if desired. Locally, use environment variables or `.env`. Never commit credentials.
 
 > **Persistence limitation:** Streamlit Community Cloud does not provide durable local disk storage across rebuilds/restarts. The demo database and conversation history can be reset. Do not use this deployment for real customer data or financial transactions.
 
