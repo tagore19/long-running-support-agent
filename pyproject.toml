@@ -1,0 +1,52 @@
+[project]
+name = "customer-support-agent"
+version = "0.1.0"
+description = "Production-grade, stateful, multi-turn e-commerce Customer Support Agent with 5-layer memory, MCP stdio tools, and deterministic policy enforcement."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0,<1.0.0",
+    "uvicorn[standard]>=0.30.0,<1.0.0",
+    "pydantic>=2.7.0,<3.0.0",
+    "pydantic-settings>=2.2.0,<3.0.0",
+    "pyyaml>=6.0.1,<7.0.0",
+    "python-dotenv>=1.0.1,<2.0.0",
+    "langgraph>=0.2.50,<1.0.0",
+    "langgraph-checkpoint-sqlite>=2.0.0,<3.0.0",
+    "aiosqlite>=0.20,<0.22",
+    "langchain-core>=0.3.0,<1.0.0",
+    "langchain-google-genai>=2.0.0,<3.0.0",
+    "google-genai>=1.0.0,<3.0.0",
+    "mcp>=1.2.0,<2.0.0",
+    "httpx>=0.27.0,<1.0.0",
+    "streamlit>=1.38.0,<2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0,<9.0.0",
+    "pytest-asyncio>=0.24.0,<1.0.0",
+    "ruff>=0.6.0,<1.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=69.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "evals*", "scripts*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests", "evals", "scripts", "app.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]

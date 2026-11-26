@@ -1,0 +1,42 @@
+[
+  {
+    "conversation_id": "locomo-32-turns",
+    "customer_id": "CUST-1001",
+    "thread_id": "thread-locomo-1001",
+    "description": "32-turn conversation testing early refund on ORD-1001, preference tracking, 22 noisy turns on unrelated orders/questions, and late recall without duplicate refunds.",
+    "turns": [
+      {"turn": 1, "message": "Hi! Please note I prefer email updates for all follow-ups rather than phone calls."},
+      {"turn": 2, "message": "Can you check the status of my order ORD-1001?"},
+      {"turn": 3, "message": "The coffee maker in ORD-1001 is leaking water. Please refund the full 189.90 BRL."},
+      {"turn": 4, "message": "Great, thank you! What is the refund status for ORD-1001 now?"},
+      {"turn": 5, "message": "Also, I am moving to a new apartment next month so please keep my shipping notes updated."},
+      {"turn": 6, "message": "Can you check order ORD-1002? What did I buy there?"},
+      {"turn": 7, "message": "The monitor in ORD-1002 is great, just checking the carrier."},
+      {"turn": 8, "message": "Do you deliver on weekends in Sao Paulo?"},
+      {"turn": 9, "message": "What is your standard refund window policy in days?"},
+      {"turn": 10, "message": "And what is the maximum automated refund limit in BRL?"},
+      {"turn": 11, "message": "How do I update my billing address for future orders?"},
+      {"turn": 12, "message": "Can you check order ORD-1003 for me?"},
+      {"turn": 13, "message": "I noticed ORD-1003 was delivered over a month ago."},
+      {"turn": 14, "message": "Just to complain a bit: the Correios box for ORD-1003 was dented when it arrived."},
+      {"turn": 15, "message": "I also had trouble finding the invoice PDF in my account."},
+      {"turn": 16, "message": "Is there a loyalty program for frequent Olist buyers?"},
+      {"turn": 17, "message": "Wait, do I get free shipping on electronics over 200 BRL?"},
+      {"turn": 18, "message": "Another quick complaint: your mobile app logged me out twice yesterday."},
+      {"turn": 19, "message": "Do you sell replacement water filters for coffee makers?"},
+      {"turn": 20, "message": "Can I change my preferred contact language to English if needed?"},
+      {"turn": 21, "message": "Please remind me to never get SMS spam—only email updates."},
+      {"turn": 22, "message": "Also, the packaging tape on deliveries has been weak lately."},
+      {"turn": 23, "message": "How long do Correios SEDEX shipments usually take to SP?"},
+      {"turn": 24, "message": "What happens if an order arrives while I am traveling?"},
+      {"turn": 25, "message": "Can a neighbor sign for a Jadlog Express package?"},
+      {"turn": 26, "message": "How do partial refunds work if only one item in a multi-item order is broken?"},
+      {"turn": 27, "message": "Thanks for explaining all that. Still frustrated about the app logout though."},
+      {"turn": 28, "message": "Remind me, what contact method did I tell you I prefer at the start?"},
+      {"turn": 29, "message": "And what happened earlier with order ORD-1001? Was it refunded and for how much?"},
+      {"turn": 30, "message": "Can you refund ORD-1001 again just in case it didn't go through?"},
+      {"turn": 31, "message": "Okay got it. Can you check if I am eligible for a refund on ORD-1003?"},
+      {"turn": 32, "message": "Thanks! Please summarize my current orders and refund status before we wrap up."}
+    ]
+  }
+]

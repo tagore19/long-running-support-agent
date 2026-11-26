@@ -1,0 +1,75 @@
+# docker-compose.yml
+# Runs the FastAPI backend and the Streamlit Inspector UI side-by-side.
+# Both services share a persistent volume for SQLite databases and trace logs.
+#
+# Usage:
+#   cp .env.example .env          # add your GEMINI_API_KEY (or leave blank for mock mode)
+#   docker compose up --build
+#
+# FastAPI docs:  http://localhost:8000/docs
+# Streamlit UI:  http://localhost:8501
+
+services:
+
+  api:
+    build:
+      context: .
+      target: runtime
+    image: customer-support-agent:latest
+    container_name: csa-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Allow overriding individual keys without editing .env
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist SQLite databases and trace logs across container restarts
+      - csa-data:/app/data
+      - csa-logs:/app/logs
+    command:
+      - uvicorn
+      - src.api.app:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  ui:
+    build:
+      context: .
+      target: runtime
+    image: customer-support-agent:latest
+    container_name: csa-ui
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8501:8501"
+    volumes:
+      - csa-data:/app/data
+      - csa-logs:/app/logs
+    depends_on:
+      api:
+        condition: service_healthy
+    command:
+      - streamlit
+      - run
+      - app.py
+      - --server.port=8501
+      - --server.address=0.0.0.0
+      - --server.headless=true
+
+volumes:
+  csa-data:
+    driver: local
+  csa-logs:
+    driver: local

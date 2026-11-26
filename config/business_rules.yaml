@@ -1,0 +1,38 @@
+policy_version: "2026.1"
+
+refund_policy:
+  refund_window_days: 30
+  maximum_refund_amount: 500.0
+  currency: "BRL"
+  require_delivered_order: true
+  allow_partial_refunds: true
+  allow_duplicate_refunds: false
+
+context:
+  max_model_context_tokens: 12000
+  compaction_trigger_tokens: 8500
+  recent_messages_to_preserve: 10
+  max_memory_tokens: 3000
+  retrieval_top_k: 5
+  max_episodes_in_context: 6
+  episode_importance_threshold: 0.4
+
+guardrails:
+  max_steps: 8
+  max_tool_calls: 5
+  max_retries: 2
+  tool_timeout_seconds: 10
+  max_input_chars: 4000
+
+support_policy:
+  default_priority: "medium"
+  valid_priorities:
+    - "low"
+    - "medium"
+    - "high"
+    - "urgent"
+  escalation_triggers:
+    - "over_limit_refund"
+    - "expired_refund_window"
+    - "human_requested"
+    - "repeated_complaint"

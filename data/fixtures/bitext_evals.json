@@ -1,0 +1,66 @@
+[
+  {
+    "id": "bitext-01",
+    "intent": "track_order",
+    "customer_id": "CUST-1002",
+    "order_id": "ORD-1004",
+    "query": "Can you check the delivery status and tracking code for my order ORD-1004?",
+    "expected_tools": ["get_order_status"]
+  },
+  {
+    "id": "bitext-02",
+    "intent": "get_refund",
+    "customer_id": "CUST-1001",
+    "order_id": "ORD-1001",
+    "query": "My coffee maker arrived damaged. Please issue a full refund for order ORD-1001.",
+    "expected_tools": ["get_order", "check_refund_eligibility", "create_refund"]
+  },
+  {
+    "id": "bitext-03",
+    "intent": "check_refund_policy",
+    "customer_id": "CUST-1001",
+    "order_id": "ORD-1003",
+    "query": "Am I still eligible for a refund on order ORD-1003?",
+    "expected_tools": ["check_refund_eligibility"]
+  },
+  {
+    "id": "bitext-04",
+    "intent": "cancel_order",
+    "customer_id": "CUST-1003",
+    "order_id": "ORD-1007",
+    "query": "Order ORD-1007 is still processing. Can I get a refund or cancel it with support?",
+    "expected_tools": ["get_order_status", "create_support_ticket"]
+  },
+  {
+    "id": "bitext-05",
+    "intent": "complaint",
+    "customer_id": "CUST-1004",
+    "order_id": "ORD-1010",
+    "query": "The gaming chair in ORD-1010 has a broken armrest and it cost 780 BRL. I want a full refund immediately!",
+    "expected_tools": ["check_refund_eligibility", "create_support_ticket"]
+  },
+  {
+    "id": "bitext-06",
+    "intent": "contact_human_agent",
+    "customer_id": "CUST-1005",
+    "order_id": "ORD-1014",
+    "query": "Please escalate my case for order ORD-1014 to a human specialist.",
+    "expected_tools": ["create_support_ticket"]
+  },
+  {
+    "id": "bitext-07",
+    "intent": "get_refund",
+    "customer_id": "CUST-1005",
+    "order_id": "ORD-1013",
+    "query": "One item from ORD-1013 was chipped. Can I get a partial refund of 150.00 BRL?",
+    "expected_tools": ["check_refund_eligibility", "create_refund"]
+  },
+  {
+    "id": "bitext-08",
+    "intent": "track_order",
+    "customer_id": "CUST-1006",
+    "order_id": "ORD-1018",
+    "query": "What happened to my order ORD-1018?",
+    "expected_tools": ["get_order_status"]
+  }
+]
