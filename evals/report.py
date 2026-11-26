@@ -47,7 +47,7 @@ def format_comparison_markdown(baseline: EvalSummary, improved: EvalSummary) -> 
     lines.append(
         "> Policy violation rate **must** be 0.0 % in improved mode. "
         "Duplicate action rate **must** be 0.0 % in improved mode. "
-        "Minimum task success rate is 85 %."
+        "Minimum task success rate is 90 %."
     )
     lines.append("")
     return "\n".join(lines)
@@ -133,14 +133,13 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    report_md = asyncio.run(
+    asyncio.run(
         generate_report(
             baseline_path=args.baseline,
             improved_path=args.improved,
             out_md=args.out,
         )
     )
-    print(report_md)
 
 
 if __name__ == "__main__":

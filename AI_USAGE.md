@@ -14,7 +14,7 @@ This codebase separates AI-assisted scaffolding and LLM planning from determinis
 | `src/policies/` | LLM has no role | All refund eligibility rules (30-day delivery window, 500.00 BRL cap, delivered-order requirement, duplicate refund block, customer ownership) are enforced in Python |
 | `src/database/` + `src/mcp_server/` | LLM has no role | Every state mutation runs inside SQLite `BEGIN IMMEDIATE` transactions with `idempotency_key` deduplication and append-only `events` triggers |
 | `src/observability/` | LLM has no role | PII masking is done by deterministic regex + allowlist before every write |
-| Verification | LLM suggestions are inputs only | `ruff check .`, `pytest` (45 tests), and 20-scenario deterministic evals gate every change |
+| Verification | LLM suggestions are inputs only | `ruff check .`, `pytest` (48 tests), and 20-scenario deterministic evals gate every change |
 
 ---
 
@@ -95,7 +95,7 @@ Every change made in response to the mistakes above is verified by:
 
 ```bash
 ruff check .          # zero lint violations
-pytest -q             # 45 tests, all passing
-python -m evals.runner --mode improved --min-score 0.85
+pytest -q             # 48 tests, all passing
+python -m evals.runner --mode improved --min-score 0.90
 # 20/20 PASS, Policy violations 0.0%, Duplicates 0.0%
 ```

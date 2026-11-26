@@ -1,9 +1,9 @@
 # Long-Running Customer Support Agent
 
-> **Production-grade, stateful, multi-turn (30+ turns) e-commerce Customer Support Agent**
+> **Stateful, multi-turn (30+ turns) e-commerce customer-support agent demo**
 > built with LangGraph · FastMCP `stdio` · SQLite · FastAPI · Streamlit
 
-[![CI](https://github.com/YOUR_ORG/long-running-support-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_ORG/long-running-support-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/tagore19/long-running-support-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/tagore19/long-running-support-agent/actions/workflows/ci.yml)
 
 ---
 
@@ -15,7 +15,7 @@ This agent handles real e-commerce support workflows — order lookups, refund r
 |---|---|
 | **LLM never decides policy** | All refund limits, delivery checks, and ownership rules are enforced in deterministic Python (`src/policies/`) and inside SQLite transactions |
 | **No duplicate refunds** | Idempotency keys stored in `tool_operations`; re-issuing the same key returns the same result without a second DB write |
-| **No cross-customer data leaks** | `customer_id` is pinned to the authenticated session; tool calls are pre-validated before MCP dispatch |
+| **Order ownership enforced** | Refund and order tools verify that the requested order belongs to the supplied `customer_id` before returning or mutating state |
 | **No prompt injection** | All untrusted inputs (user message, order notes, documents, images) are HTML-escaped and wrapped in explicit `<*_untrusted_data>` delimiters before the prompt builder sees them |
 | **No PII in logs** | Regex + allowlist redaction masks emails, phones, CPF/Aadhaar/CEP numbers, and secrets before every JSONL trace write |
 | **Memory across 30+ turns** | 5-layer architecture: append-only event store → transactional SQLite → episodic episodes → hybrid TF-IDF retrieval → token-budget compaction |
@@ -76,7 +76,7 @@ flowchart TD
 
 ```bash
 # 1. Clone
-git clone https://github.com/YOUR_ORG/long-running-support-agent.git
+git clone https://github.com/tagore19/long-running-support-agent.git
 cd long-running-support-agent
 
 # 2. Environment file
@@ -137,8 +137,8 @@ ruff check .
 # Full pytest suite (unit + memory + security + integration)
 pytest -q
 
-# 20 deterministic eval scenarios — improved mode (must score ≥ 0.90)
-python -m evals.runner --mode improved --min-score 0.85 --output data/evals/improved.json
+# 20 deterministic eval scenarios — improved mode (CI threshold: ≥ 0.90)
+python -m evals.runner --mode improved --min-score 0.90 --output data/evals/improved.json
 
 # Baseline run (sliding-window, no guardrails — intentionally weaker)
 python -m evals.runner --mode baseline --output data/evals/baseline.json
@@ -150,44 +150,33 @@ python -m evals.report \
     --out data/evals/before_after_report.md
 ```
 
-**Last confirmed results (2026-11-26):**
-
-| Mode | Task Success | Policy Violations | Duplicates | Memory Recall |
-|---|---|---|---|---|
-| Baseline | 50% (10/20) | 35.0% | 15.0% | 0.0% |
-| **Improved** | **100% (20/20)** | **0.0%** | **0.0%** | **100%** |
+The committed [before/after eval report](evals/reports/before-after.md) records the most recent checked-in run. Latency is machine- and run-dependent; the CI gate checks task success, policy violations, and duplicate actions.
 
 ---
 
-## Deployment (Free Tier Options)
+## Data and Evaluation Scope
 
-### Option A — Streamlit Community Cloud
+- `data/fixtures/olist_orders.json` is a compact, hand-authored Olist-shaped fixture used to exercise order and refund workflows; it is not the Kaggle Olist dataset.
+- `data/fixtures/bitext_evals.json` contains support-intent examples in a Bitext-style format; it is not a downloaded Bitext corpus.
+- `data/fixtures/long_conversations.json` contains an authored 32-turn stress conversation; it is not a LoCoMo or Multi-Session Chat sample.
+- The fixed 20-case evaluation set is project-authored and deterministic. It validates framework behavior and guardrails, not model accuracy or performance on an external benchmark.
 
-1. Push to a public GitHub repo.
-2. Connect at <https://share.streamlit.io> → select `app.py`.
-3. Add `GEMINI_API_KEY` and other `.env` keys as **Secrets**.
-4. The app seeds SQLite on first boot from the bundled seed script.
+---
 
-> **Limitation:** Streamlit Community Cloud has no persistent filesystem across deploys — each cold start re-seeds from scratch. Use `LLM_PROVIDER=mock` for free tier.
+## Deployment — Streamlit Community Cloud
 
-### Option B — Hugging Face Spaces
+1. Sign in at <https://share.streamlit.io> and deploy `tagore19/long-running-support-agent`.
+2. Set the main file to `app.py`. Streamlit Cloud installs dependencies from the committed `requirements.txt`.
+3. The app runs in offline mock mode without secrets. To enable Gemini, add `GEMINI_API_KEY` to Streamlit Cloud's Secrets; the UI maps it to the process environment for the existing settings layer. Set `LLM_PROVIDER = "gemini"` and `LLM_MODE = "live"` there if desired. Locally, use environment variables or `.env`. Never commit credentials.
+4. Verify the app with the valid-refund, expired-window, and 32-turn stress-test presets.
 
-1. Create a new Space (SDK: Streamlit).
-2. Push all files; add secrets in Space settings.
-3. Add a `packages.txt` for any OS dependencies (none needed here).
+> **Persistence limitation:** Streamlit Community Cloud does not provide durable local disk storage across rebuilds/restarts. The demo database and conversation history can be reset. Do not use this deployment for real customer data or financial transactions.
 
-### Option C — Render (Docker)
-
-1. Connect your repo.
-2. Choose **Docker** deploy; set `GEMINI_API_KEY` as an environment variable.
-3. Add a **Disk** (persistent volume) mounted at `/app/data`.
-4. `docker compose up` or use the Render Docker deploy target.
-
-### Option D — Local Demo Recording
+### Local Demo Fallback
 
 ```bash
-python -m scripts.run_demo      # 32-turn script outputs a clean transcript
-# Record with asciinema, OBS, or similar
+python -m scripts.run_demo      # runs a deterministic 32-turn transcript
+# To submit a recording, capture the Streamlit UI or this command with your preferred recorder.
 ```
 
 ---
@@ -281,6 +270,7 @@ docker compose up --build --no-cache   # or pin image: customer-support-agent:v0
 ## Known Limitations
 
 - **SQLite concurrency:** SQLite's `BEGIN IMMEDIATE` transactions prevent double-write races at the row level but are not suitable for high-fan-out multi-process deployments. Migrate to PostgreSQL for production scale.
+- **No end-user authentication:** This is a public demo with synthetic fixtures. The API accepts a caller-supplied `customer_id`, and the UI lets visitors select demo customers. Order ownership checks do not authenticate a real customer; do not connect real accounts or data.
 - **Stdio MCP on Windows:** Each MCP server starts as a child process over `stdio`. On Windows, asyncio subprocess handling has additional overhead; the persistent worker queue in `MCPToolClient` mitigates this but does not eliminate it.
 - **`aiosqlite` version pin:** `langgraph-checkpoint-sqlite` requires `aiosqlite < 0.22` (pinned to `0.21.x`). Upgrading LangGraph may lift this constraint.
 - **In-memory TF-IDF:** `HybridMemoryRetriever` builds a TF-IDF matrix on the fly per query over all episodes for the customer. For customers with thousands of episodes, switch to a vector DB (Chroma, pgvector).

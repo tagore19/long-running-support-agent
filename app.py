@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from typing import Any
 
@@ -13,8 +15,28 @@ from src.agent.graph import SupportAgentRunner
 from src.config import get_settings, load_app_config
 from src.database.repositories import SupportRepository
 from src.observability.metrics import aggregate_trace_metrics, load_traces_from_jsonl
+from streamlit.errors import StreamlitSecretNotFoundError
 
 st.set_page_config(page_title="Long-Running Customer Support Agent", layout="wide")
+
+
+def _apply_runtime_secrets(
+    secrets: Mapping[str, Any], environ: MutableMapping[str, str]
+) -> None:
+    """Expose Streamlit-hosted Gemini credentials through the app's env-based settings."""
+    api_key = secrets.get("GEMINI_API_KEY")
+    if not api_key:
+        return
+    environ.setdefault("GEMINI_API_KEY", str(api_key))
+    environ.setdefault("LLM_PROVIDER", str(secrets.get("LLM_PROVIDER") or "gemini"))
+    environ.setdefault("LLM_MODE", str(secrets.get("LLM_MODE") or "live"))
+
+
+def _load_streamlit_secrets() -> None:
+    try:
+        _apply_runtime_secrets(st.secrets, os.environ)
+    except StreamlitSecretNotFoundError:
+        return
 
 
 def _init_repo() -> SupportRepository:
@@ -95,6 +117,7 @@ async def _run_stress_test_async(thread_id: str, customer_id: str, mode: str) ->
 
 
 def main() -> None:
+    _load_streamlit_secrets()
     st.title("Long-Running E-Commerce Customer Support Console")
     st.caption(
         "5-Layer Event-Driven Memory | FastMCP Stdio Tools | Deterministic Policy Gate | PII-Redacted JSONL Traces"

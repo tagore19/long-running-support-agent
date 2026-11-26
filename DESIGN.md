@@ -141,28 +141,21 @@ Denylist-based redaction (block known bad patterns) always has gaps — a new fi
 
 ## 3. Model Choices, Latency & Token Figures
 
-> All numbers below are from **actual local runs on this machine** using `LLM_PROVIDER=mock` for tests/evals and `MODEL_NAME=gemini-2.5-flash` for the live 32-turn demo. Numbers marked _(mock)_ are from the offline mock LLM which returns near-zero latency canned responses; _(live)_ numbers are from the Google Gemini free-tier API.
+The checked-in eval report is a deterministic offline run using `LLM_PROVIDER=mock` on Windows, recorded 2026-11-26. Mock runtime cost is **$0.00**; token counts are application estimates, not billed model usage. Latencies include local graph, SQLite, and MCP stdio overhead and are not model-inference benchmarks.
 
-| Metric | Value | Mode | Source |
-|---|---|---|---|
-| `run_demo.py` avg tokens / turn | 3,293.9 | live | `scripts/run_demo.py` trace stats |
-| `run_demo.py` p95 latency | 32.7 ms | live (cached) | `scripts/run_demo.py` trace stats |
-| Evals avg tokens / turn (improved) | 1,821.0 | mock | `evals/runner.py` output |
-| Evals p95 latency (improved) | 227.4 ms | mock | `evals/runner.py` output |
-| Evals avg tokens / turn (baseline) | 999.0 | mock | `evals/runner.py` output |
-| Compaction: tokens before | 712 | live | `run_demo.py` summary |
-| Compaction: tokens after | 180 | live | `run_demo.py` summary |
-| Compactions in 32-turn demo | 4 | live | `run_demo.py` summary |
-| Pytest suite duration | ~43 s | mock | `pytest -q` |
+| Metric | Baseline | Improved |
+|---|---:|---:|
+| Task success | 50.0% (10/20) | 100.0% (20/20) |
+| Memory recall | 0.0% | 100.0% |
+| Policy violations | 35.0% | 0.0% |
+| Duplicate actions | 15.0% | 0.0% |
+| Average tokens per turn | 999.0 | 1,821.1 |
+| p95 turn latency | 150.1 ms | 283.6 ms |
+| Estimated model cost for these mock evals | $0.00 | $0.00 |
 
-**Model selection rationale:**
+`gemini-2.5-flash` is the optional hosted model for structured `AgentDecision` output; `gemini-2.0-flash-lite` is configured for compaction. No live Gemini latency or cost measurement is included because it depends on account tier, region, network, and current provider pricing. `LLM_PROVIDER=mock` is the reproducible, zero-cost default for tests and CI.
 
-- `gemini-2.5-flash` (default) — Best free-tier balance of speed and instruction-following quality for structured JSON `AgentDecision` output. Supports the 12 K token context budget.
-- `gemini-2.0-flash-lite` (compaction) — Used for memory compaction calls where speed matters more than reasoning depth and the structured `CompactedMemoryPayload` schema is simpler than a full agent decision.
-- `LLM_PROVIDER=mock` — Deterministic offline mock for CI and eval runs. Returns pre-computed responses based on keyword matching; costs zero tokens and zero dollars.
-
-**Free-tier API constraints (Google AI Studio):**  
-Gemini 2.5 Flash free tier: 10 RPM, 250 K TPD (as of November 2026). The agent is well within this limit for single-user demo use; sustained production traffic would require a paid plan or Vertex AI.
+The local 32-turn mock demo also completed with 1 refund, 1 escalation ticket, 9 events, and 4 compactions (last compaction: 712 to 180 estimated tokens). Its measured average was 3,286.66 estimated tokens per turn and p95 latency was 52.11 ms; these timings are specific to this machine and run.
 
 ---
 
@@ -172,7 +165,7 @@ Run these commands in order on a fresh machine (or fresh directory) to verify fu
 
 ```bash
 # Step 1 — Clone
-git clone https://github.com/YOUR_ORG/long-running-support-agent.git
+git clone https://github.com/tagore19/long-running-support-agent.git
 cd long-running-support-agent
 
 # Step 2 — Environment
@@ -198,14 +191,14 @@ python -m scripts.seed_data
 
 # Step 7 — Tests
 pytest -q
-# Expected: "45 passed, 1 warning"
+# Expected: all tests pass
 
 # Step 8 — Demo
 python -m scripts.run_demo
-# Expected: 32 turns, 1 refund, 1 ticket, 9 events, 4 compactions
+# Verified locally: 32 turns, 1 refund, 1 ticket, 9 events, 4 compactions
 
 # Step 9 — Evals
-python -m evals.runner --mode improved --min-score 0.85 --output data/evals/improved.json
+python -m evals.runner --mode improved --min-score 0.90 --output data/evals/improved.json
 # Expected: 20/20 PASS, Policy 0.0%, Duplicates 0.0%
 
 python -m evals.runner --mode baseline --output data/evals/baseline.json

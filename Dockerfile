@@ -10,9 +10,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY pyproject.toml README.md ./
 
-# Install all runtime + dev dependencies into an isolated prefix
+# Copy sources before building the non-editable package into an isolated prefix.
+COPY config/           ./config/
+COPY src/              ./src/
+COPY scripts/          ./scripts/
+COPY evals/            ./evals/
+COPY app.py            ./app.py
+COPY .env.example      ./.env.example
+
 RUN pip install --upgrade pip \
-    && pip install --prefix=/install --no-warn-script-location -e ".[dev]" --no-cache-dir
+    && pip install --prefix=/install --no-warn-script-location ".[dev]" --no-cache-dir
 
 # ── Stage 2: lean runtime image ───────────────────────────────────────────────
 FROM python:3.11-slim AS runtime

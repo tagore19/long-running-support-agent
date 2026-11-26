@@ -1,0 +1,24 @@
+{
+  "baseline": {
+    "mode": "baseline",
+    "total_scenarios": 20,
+    "passed_scenarios": 10,
+    "task_success_rate": 0.5,
+    "memory_recall_accuracy": 0.0,
+    "policy_violation_rate": 0.35,
+    "duplicate_action_rate": 0.15,
+    "avg_tokens_per_turn": 999.03,
+    "p95_latency_ms": 150.08
+  },
+  "improved": {
+    "mode": "improved",
+    "total_scenarios": 20,
+    "passed_scenarios": 20,
+    "task_success_rate": 1.0,
+    "memory_recall_accuracy": 1.0,
+    "policy_violation_rate": 0.0,
+    "duplicate_action_rate": 0.0,
+    "avg_tokens_per_turn": 1821.08,
+    "p95_latency_ms": 283.63
+  }
+}
